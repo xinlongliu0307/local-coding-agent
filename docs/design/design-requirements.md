@@ -3,12 +3,15 @@
 This document specifies the design requirements for the personal AI coding
 agent to be built during Phase One onwards. It is the prescriptive
 counterpart to `patterns-across-sessions.md`, which records the
-observations from Phase Zero, Week One that motivate these requirements.
+observations that motivate these requirements.
 
-This file is a draft. Variation 3 will add a fourth session's evidence and
-the synthesis weekend (31 May - 1 June) will produce the version that
-becomes the first substantive commit to the public GitHub repository in
-Phase Zero, Week Two.
+This is the finalised version of the design requirements, produced during
+the synthesis pass that closed Phase Zero. It consolidates the evidence
+from four structured evaluation sessions of a reference coding agent into
+a set of mandatory behaviours, forbidden behaviours, and operating modes
+that will inform Phase One implementation. The document is stable rather
+than provisional, but it remains subject to revision as implementation
+reveals considerations that evaluation alone could not surface.
 
 ## 1. Purpose and Scope
 
@@ -82,6 +85,25 @@ source observation is cited.
    sentences) and should give the user a basis for trusting or
    questioning the fix before tests are run. (Source: Variation 3's
    wrap-up summary.)
+
+9. Produce a file-content snapshot of all modified files at the end of
+   every task, stored under a hidden agent directory with a thirty-day
+   pruning policy, so that verification by external review does not
+   depend on diffs alone. (Source: the diff-based reading error during
+   the refactor evaluation review.)
+
+10. Reproduce a user-reported symptom before reading code on any
+    diagnostic task where the agent has not already run the affected
+    code in the current session. Where the agent has already run the
+    code and observed the symptom, reproduction is optional. (Source:
+    the diagnostic evaluation session's trust of an unverified symptom.)
+
+11. Default to step-by-step approval for diagnostic and destructive
+    tasks, and to batched approval for scaffolding and refactor tasks.
+    The approval cadence is declared in the agent's opening message
+    alongside the mode declaration. (Source: the diagnostic evaluation
+    session's per-command approval, which produced a legible narrative
+    and suppressed the reflexive version-control assumption.)
 
 ## 3. Forbidden Behaviours
 
@@ -222,68 +244,76 @@ The harness produces a file-content snapshot of all modified files at
 the end of each session, preserved alongside the session log, so that
 verification by external review does not depend on diffs alone.
 
-## 7. Open Questions for the Synthesis Weekend
+## 7. Resolved Design Decisions
 
-Variation 3 has resolved or sharpened five of the seven open questions
-that this section originally listed. The remaining two are flagged
-for the synthesis weekend (31 May - 1 June).
+The questions that were open during the evaluation phase have been
+resolved during the synthesis pass. Each resolution is recorded here for
+provenance; the resolutions that constitute new behavioural rules have
+been incorporated into Sections Two and Three.
 
-**Question 1 (tentatively resolved).** Whether diagnostic-mode
-behaviour warrants a fourth mode beyond ask, prototype, and commit.
-Tentative answer: no. The existing commit mode, combined with the
-task-type-dependent reading-order requirement in Section Two and the
-confidence-articulation requirement, covers the observed diagnostic
-behaviour without introducing a fourth mode. The synthesis weekend
-should confirm this.
+**Whether diagnostic work warrants a fourth mode.** Resolved: no. The
+existing commit mode, combined with the task-type-dependent reading-order
+requirement and the confidence-articulation requirement, covers the
+observed diagnostic behaviour. Introducing a fourth mode would add
+conceptual overhead without capturing any behaviour that the existing
+modes plus the diagnostic-specific requirements do not already address.
 
-**Question 2 (tentatively resolved).** Whether the boundary-test
-design pattern (using `is` for identity verification in refactors)
-generalises to other task types. Tentative answer: partially. The
-general principle is "produce tests that exclude the most-recent
-failure mode": for refactors, that means identity checks via `is`;
-for diagnostic fixes, that means tight regression bounds around the
-known correct value. The pattern is therefore task-type-dependent,
-and the synthesis weekend should encode it as such rather than as a
-single universal rule.
+**Whether the boundary-test design pattern generalises across task
+types.** Resolved: partially, as a task-type-dependent principle. The
+governing rule is that the agent should produce tests that exclude the
+most recent failure mode. For refactors, this means identity checks that
+confirm code was moved rather than duplicated; for diagnostic fixes, it
+means tight regression bounds around the known-correct value. The pattern
+is therefore encoded by task type rather than as a single universal rule.
 
-**Question 3 (resolved).** Whether the clarifying-question protocol
-should be triggered by an explicit "ask mode" declaration or by an
-automated heuristic. Resolution: by explicit declaration. The
-three-mode disposition in Section Four already requires the agent
-to declare its mode at the start of each task, and the clarifying-
-question protocol naturally attaches to ask mode. No separate
-heuristic is needed.
+**Whether the clarifying-question protocol is triggered by mode
+declaration or by an automated heuristic.** Resolved: by explicit mode
+declaration. The three-mode disposition already requires the agent to
+declare its mode at the start of each task, and the clarifying-question
+protocol attaches naturally to ask mode. No separate heuristic is needed.
 
-**Question 4 (still open).** Whether the file-content verification
-snapshot should be produced automatically by the harness or on user
-request, and what the storage and pruning policy should be. The
-synthesis weekend should resolve this, with a preference for
-automatic snapshotting and a thirty-day pruning policy based on the
-likely volume of personal use.
+**Whether file-content verification snapshots are automatic or
+on-request.** Resolved: automatic. The agent produces a file-content
+snapshot of all modified files at the end of every task, stored under a
+hidden agent directory, with a thirty-day pruning policy appropriate to
+personal-scale use. This decision is incorporated as a mandatory
+behaviour in Section Two.
 
-**Question 5 (tentatively resolved).** Whether the mode declaration
-should be visible to the user in real time, or only logged for
-post-hoc review. Tentative answer: visible in real time. Variation
-3's explicit step-by-step approval demonstrated that visible
-narrative produces a more legible diagnostic process; the same
-principle applies to mode declarations.
+**Whether the mode declaration is visible in real time or logged for
+later review.** Resolved: visible in real time. The diagnostic evaluation
+session demonstrated that a visible reasoning narrative produces a more
+legible process; the same principle applies to mode declarations, which
+are surfaced in the agent's opening message for each task.
 
-**New Question 6 (added from Variation 3).** Whether the agent
-should reproduce user-reported symptoms before reading code, or
-trust the report and proceed directly. Variation 3 trusted the
-report and produced a fast correct fix; a different bug with the
-same symptom description could have produced a fast wrong fix. The
-synthesis weekend should resolve whether independent symptom
-reproduction is mandatory, recommended, or optional, and under what
-conditions.
+**Whether user-reported symptoms must be reproduced before code is
+read.** Resolved: mandatory for diagnostic tasks where the agent has not
+already run the code in the current session, and optional where it has.
+The diagnostic evaluation session showed the agent trusting a reported
+symptom without independent reproduction, which produced a correct fix in
+that instance but would risk a fast wrong fix where the report is
+inaccurate. This decision is incorporated as a mandatory behaviour in
+Section Two.
 
-**New Question 7 (added from Variation 3).** Whether step-by-step
-approval should be the default mode of operation or a triggered
-mode. Variation 3 conducted itself under explicit per-command
-approval and produced the most legible session of the four; the
-overhead was real but the visibility was high. The synthesis
-weekend should resolve whether this is the right default for the
-user's own agent, or whether it should be triggered specifically
-for diagnostic work and high-risk operations.
+**Whether step-by-step approval is the default cadence.** Resolved:
+step-by-step approval is the default for diagnostic and destructive
+tasks, and the lower-overhead batched-approval cadence is the default for
+scaffolding and refactor tasks. The diagnostic evaluation session
+demonstrated that per-command approval both produced a legible narrative
+and suppressed the reflexive version-control assumption. This decision is
+incorporated as a mandatory behaviour in Section Two.
 
+All resolutions above remain subject to revision as Phase One
+implementation reveals considerations that evaluation alone could not
+surface.
 
+## 8. Provenance
+
+These requirements are grounded in four structured evaluation sessions of
+a reference coding agent conducted in late May 2026. The sessions examined
+scaffolding under a well-specified brief, behaviour under a deliberately
+ambiguous brief, multi-file refactoring under constraint, and diagnostic
+bug-hunting. Each session was documented in an observation record, and the
+behavioural patterns observed across sessions were consolidated into a
+companion patterns document before being translated into the prescriptive
+constraints recorded here. The underlying observation records are preserved
+in the maintainer's personal archive and are not part of this repository.
