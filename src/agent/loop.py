@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any
+from typing import Any, Callable
 
+from agent.approval import console_approver, is_approved
 from agent.model import ModelClient
 from agent.tools.registry import TOOL_FUNCTIONS, TOOL_SCHEMAS
 
@@ -14,17 +15,30 @@ SYSTEM_PROMPT = (
     "You are a coding assistant operating in a command-line environment. "
     "You have access to tools that let you inspect and act on the user's "
     "project. When a task requires information you do not have, call the "
-    "appropriate tool rather than guessing. When you have enough information "
-    "to answer or have completed the task, respond with plain text and do "
-    "not call further tools."
+    "appropriate tool rather than guessing. Some tools change the filesystem "
+    "and require user approval; if an action is declined, do not retry it "
+    "without changing your approach. When you have enough information to "
+    "answer or have completed the task, respond with plain text and do not "
+    "call further tools."
 )
 
 MAX_ITERATIONS = 10
 
 
-def run_task(task: str, model: ModelClient | None = None, verbose: bool = True) -> str:
-    """Run a single task through the ReAct loop and return the final answer."""
+def run_task(
+    task: str,
+    model: ModelClient | None = None,
+    approver: Callable[[str, dict[str, Any]], bool] | None = None,
+    verbose: bool = True,
+) -> str:
+    """Run a single task through the ReAct loop and return the final answer.
+
+    Tool calls are dispatched only after passing the approval gate. Read-only
+    tools are approved automatically; mutating tools are referred to the
+    approver, which defaults to an interactive console prompt.
+    """
     client = model or ModelClient()
+    approve = approver or console_approver
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": task},
@@ -38,9 +52,6 @@ def run_task(task: str, model: ModelClient | None = None, verbose: bool = True) 
         messages.append(message)
 
         tool_calls = message.get("tool_calls")
-
-        # Fall back to detecting a tool call embedded in the text content,
-        # which smaller models emit instead of using the structured field.
         if not tool_calls:
             embedded = _extract_embedded_tool_call(message.get("content", ""))
             if embedded is not None:
@@ -61,10 +72,17 @@ def run_task(task: str, model: ModelClient | None = None, verbose: bool = True) 
             if verbose:
                 print(f"Model requested tool: {name}({arguments})")
 
-            result = _dispatch_tool(name, arguments)
-
-            if verbose:
-                print(f"Tool result:\n{result}")
+            if not is_approved(name, arguments, approve):
+                result = (
+                    f"The user declined to approve the '{name}' action. "
+                    "It was not performed."
+                )
+                if verbose:
+                    print(result)
+            else:
+                result = _dispatch_tool(name, arguments)
+                if verbose:
+                    print(f"Tool result:\n{result}")
 
             messages.append({"role": "tool", "content": result})
 
@@ -75,19 +93,12 @@ def run_task(task: str, model: ModelClient | None = None, verbose: bool = True) 
 
 
 def _extract_embedded_tool_call(content: str) -> dict[str, Any] | None:
-    """Detect a tool-call JSON object embedded in the model's text content.
-
-    Smaller models sometimes emit a tool call as JSON in the content field
-    rather than using the structured tool_calls field. This attempts to
-    parse such an object and normalise it into the same shape the structured
-    field uses. Returns None if no valid tool-call object is found.
-    """
+    """Detect a tool-call JSON object embedded in the model's text content."""
     if not content:
         return None
 
     candidate = content.strip()
 
-    # Strip Markdown code fences if the model wrapped the JSON in them.
     fence_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", candidate, re.DOTALL)
     if fence_match:
         candidate = fence_match.group(1)
