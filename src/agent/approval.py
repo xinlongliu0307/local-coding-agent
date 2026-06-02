@@ -1,20 +1,15 @@
-"""The approval gate that governs whether mutating tool calls may proceed."""
+"""The approval gate and the session state that governs approval cadence."""
 
 from __future__ import annotations
 
 from typing import Any, Callable
 
+from agent.mode import Mode, STEP_BY_STEP_MODES
 from agent.tools.registry import MUTATING_TOOLS
 
 
 def console_approver(name: str, arguments: dict[str, Any]) -> bool:
-    """Ask the user on the console whether a mutating tool call may proceed.
-
-    Presents the tool name and its arguments and waits for a yes or no
-    response. Returns True if the user approves, False otherwise. This is the
-    default interactive approver used when the agent runs from the command
-    line.
-    """
+    """Ask the user on the console whether a mutating tool call may proceed."""
     print("\n*** Approval required ***")
     print(f"The agent wants to call the mutating tool: {name}")
     for key, value in arguments.items():
@@ -24,17 +19,47 @@ def console_approver(name: str, arguments: dict[str, Any]) -> bool:
     return response in ("y", "yes")
 
 
-def is_approved(
-    name: str,
-    arguments: dict[str, Any],
-    approver: Callable[[str, dict[str, Any]], bool],
-) -> bool:
-    """Decide whether a tool call may proceed.
+def batch_console_approver() -> bool:
+    """Ask the user once whether mutating actions may proceed for the task."""
+    print("\n*** Batch approval required ***")
+    print(
+        "This task is running in routine mode. The agent may perform multiple "
+        "mutating actions. Approving once permits all mutating actions for "
+        "this task."
+    )
+    response = input("Approve mutating actions for this task? [y/N] ").strip().lower()
+    return response in ("y", "yes")
 
-    Read-only tools are approved automatically. Mutating tools, identified by
-    membership in the MUTATING_TOOLS set, are referred to the supplied
-    approver function, which decides whether the call is permitted.
+
+class ApprovalSession:
+    """Tracks approval state across the tool calls of a single task.
+
+    In a step-by-step mode, every mutating call is referred to the per-call
+    approver. In a batched mode, the first mutating call triggers a single
+    batch approval that is remembered and applied to all subsequent mutating
+    calls within the same task.
     """
-    if name not in MUTATING_TOOLS:
-        return True
-    return approver(name, arguments)
+
+    def __init__(
+        self,
+        mode: Mode,
+        per_call_approver: Callable[[str, dict[str, Any]], bool],
+        batch_approver: Callable[[], bool],
+    ) -> None:
+        self.mode = mode
+        self._per_call_approver = per_call_approver
+        self._batch_approver = batch_approver
+        self._batch_decision: bool | None = None
+
+    def is_approved(self, name: str, arguments: dict[str, Any]) -> bool:
+        """Decide whether a tool call may proceed under the session's cadence."""
+        if name not in MUTATING_TOOLS:
+            return True
+
+        if self.mode in STEP_BY_STEP_MODES:
+            return self._per_call_approver(name, arguments)
+
+        # Batched cadence: decide once, then reuse the decision.
+        if self._batch_decision is None:
+            self._batch_decision = self._batch_approver()
+        return self._batch_decision

@@ -6,9 +6,17 @@ import json
 import re
 from typing import Any, Callable
 
-from agent.approval import console_approver, is_approved
+from agent.approval import (
+    ApprovalSession,
+    batch_console_approver,
+    console_approver,
+)
+from agent.mode import Mode, cadence_for
 from agent.model import ModelClient
 from agent.tools.registry import TOOL_FUNCTIONS, TOOL_SCHEMAS
+
+from agent.approval import ApprovalSession
+from agent.mode import Mode
 
 
 SYSTEM_PROMPT = (
@@ -27,18 +35,30 @@ MAX_ITERATIONS = 10
 
 def run_task(
     task: str,
+    mode: Mode = Mode.CAREFUL,
     model: ModelClient | None = None,
-    approver: Callable[[str, dict[str, Any]], bool] | None = None,
+    session: ApprovalSession | None = None,
     verbose: bool = True,
 ) -> str:
     """Run a single task through the ReAct loop and return the final answer.
 
-    Tool calls are dispatched only after passing the approval gate. Read-only
-    tools are approved automatically; mutating tools are referred to the
-    approver, which defaults to an interactive console prompt.
+    The mode is declared at the start of the task and determines the approval
+    cadence. Careful mode approves each mutating action individually; routine
+    mode approves mutating actions once for the whole task. A custom approval
+    session may be supplied to override the default console-based approvers,
+    which is used in testing.
     """
     client = model or ModelClient()
-    approve = approver or console_approver
+    approval = session or ApprovalSession(
+        mode=mode,
+        per_call_approver=console_approver,
+        batch_approver=batch_console_approver,
+    )
+
+    if verbose:
+        print(f"Operating mode: {approval.mode.value}")
+        print(f"Approval cadence: {cadence_for(approval.mode)}")
+
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": task},
@@ -53,9 +73,9 @@ def run_task(
 
         tool_calls = message.get("tool_calls")
         if not tool_calls:
-            embedded = _extract_embedded_tool_call(message.get("content", ""))
-            if embedded is not None:
-                tool_calls = [embedded]
+            embedded = _extract_embedded_tool_calls(message.get("content", ""))
+            if embedded:
+                tool_calls = embedded
 
         if not tool_calls:
             final_text = message.get("content", "")
@@ -72,7 +92,7 @@ def run_task(
             if verbose:
                 print(f"Model requested tool: {name}({arguments})")
 
-            if not is_approved(name, arguments, approve):
+            if not approval.is_approved(name, arguments):
                 result = (
                     f"The user declined to approve the '{name}' action. "
                     "It was not performed."
@@ -92,31 +112,34 @@ def run_task(
     )
 
 
-def _extract_embedded_tool_call(content: str) -> dict[str, Any] | None:
-    """Detect a tool-call JSON object embedded in the model's text content."""
+def _extract_embedded_tool_calls(content: str) -> list[dict[str, Any]]:
+    """Detect one or more tool-call JSON objects embedded in text content.
+
+    Smaller models sometimes emit tool calls as JSON in the content field
+    rather than using the structured tool_calls field, and may emit several
+    such objects in a single response. This finds every top-level JSON object
+    in the content, parses each, and returns those that name a known tool,
+    normalised into the structured tool-call shape. Returns an empty list if
+    none are found.
+    """
     if not content:
-        return None
+        return []
 
-    candidate = content.strip()
-
-    fence_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", candidate, re.DOTALL)
-    if fence_match:
-        candidate = fence_match.group(1)
-
-    try:
-        parsed = json.loads(candidate)
-    except json.JSONDecodeError:
-        return None
-
-    if not isinstance(parsed, dict):
-        return None
-
-    name = parsed.get("name")
-    if not isinstance(name, str) or name not in TOOL_FUNCTIONS:
-        return None
-
-    arguments = parsed.get("arguments", {})
-    return {"function": {"name": name, "arguments": arguments}}
+    calls: list[dict[str, Any]] = []
+    for match in re.finditer(r"\{(?:[^{}]|\{[^{}]*\})*\}", content):
+        candidate = match.group(0)
+        try:
+            parsed = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(parsed, dict):
+            continue
+        name = parsed.get("name")
+        if not isinstance(name, str) or name not in TOOL_FUNCTIONS:
+            continue
+        arguments = parsed.get("arguments", {})
+        calls.append({"function": {"name": name, "arguments": arguments}})
+    return calls
 
 
 def _coerce_arguments(raw: Any) -> dict[str, Any]:
@@ -140,3 +163,26 @@ def _dispatch_tool(name: str, arguments: dict[str, Any]) -> str:
         return function(**arguments)
     except TypeError as error:
         return f"Error calling '{name}': {error}"
+
+def test_loop_detects_multiple_tool_calls_embedded_in_content(tmp_path):
+    file_a = tmp_path / "a.txt"
+    file_b = tmp_path / "b.txt"
+    content = (
+        f'{{"name": "write_file", "arguments": {{"path": "{file_a}", '
+        f'"content": "a"}}}}\n'
+        f'{{"name": "write_file", "arguments": {{"path": "{file_b}", '
+        f'"content": "b"}}}}'
+    )
+    fake = FakeModelClient(
+        [
+            {"content": content, "tool_calls": None},
+            {"content": "Both files created.", "tool_calls": None},
+        ]
+    )
+    session = ApprovalSession(Mode.CAREFUL, lambda n, a: True, lambda: True)
+    result = run_task(
+        "Create two files.", model=fake, session=session, verbose=False
+    )
+    assert result == "Both files created."
+    assert file_a.read_text() == "a"
+    assert file_b.read_text() == "b"
