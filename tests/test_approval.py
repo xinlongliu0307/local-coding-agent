@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent.approval import is_approved
+from agent.approval import ApprovalSession
 from agent.loop import run_task
+from agent.mode import Mode
 from agent.tools.read_file import read_file
 from agent.tools.write_file import write_file
 
@@ -34,6 +35,20 @@ def deny_all(name: str, arguments: dict[str, Any]) -> bool:
     return False
 
 
+def approve_batch() -> bool:
+    return True
+
+
+def deny_batch() -> bool:
+    return False
+
+
+def _careful_session(
+    per_call=approve_all, batch=approve_batch
+) -> ApprovalSession:
+    return ApprovalSession(Mode.CAREFUL, per_call, batch)
+
+
 def test_write_file_then_read_file_round_trip(tmp_path):
     target = tmp_path / "note.txt"
     write_result = write_file(str(target), "hello world")
@@ -46,13 +61,17 @@ def test_read_file_reports_missing_file():
     assert "Error" in result
 
 
-def test_is_approved_passes_read_only_tool_without_asking():
-    assert is_approved("read_file", {"path": "x"}, deny_all) is True
+def test_session_passes_read_only_tool_without_asking():
+    session = ApprovalSession(Mode.CAREFUL, deny_all, deny_batch)
+    assert session.is_approved("read_file", {"path": "x"}) is True
 
 
-def test_is_approved_refers_mutating_tool_to_approver():
-    assert is_approved("write_file", {"path": "x", "content": "y"}, deny_all) is False
-    assert is_approved("write_file", {"path": "x", "content": "y"}, approve_all) is True
+def test_session_refers_mutating_tool_to_approver():
+    denying = ApprovalSession(Mode.CAREFUL, deny_all, deny_batch)
+    assert denying.is_approved("write_file", {"path": "x", "content": "y"}) is False
+
+    approving = ApprovalSession(Mode.CAREFUL, approve_all, approve_batch)
+    assert approving.is_approved("write_file", {"path": "x", "content": "y"}) is True
 
 
 def test_loop_performs_write_when_approved(tmp_path):
@@ -74,7 +93,10 @@ def test_loop_performs_write_when_approved(tmp_path):
         ]
     )
     result = run_task(
-        "Create the file.", model=fake, approver=approve_all, verbose=False
+        "Create the file.",
+        model=fake,
+        session=_careful_session(),
+        verbose=False,
     )
     assert result == "I created the file."
     assert target.read_text() == "data"
@@ -99,7 +121,10 @@ def test_loop_skips_write_when_denied(tmp_path):
         ]
     )
     result = run_task(
-        "Create the file.", model=fake, approver=deny_all, verbose=False
+        "Create the file.",
+        model=fake,
+        session=_careful_session(per_call=deny_all, batch=deny_batch),
+        verbose=False,
     )
     assert result == "I understand, I will not create it."
     assert not target.exists()
