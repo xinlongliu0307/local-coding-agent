@@ -18,6 +18,7 @@ from agent.record import TaskRecord
 from agent.summary import build_summary
 from agent.tools.registry import TOOL_FUNCTIONS, TOOL_SCHEMAS
 from agent.snapshot import prune_old_snapshots, take_snapshot
+from agent.reading_order import classify_task, reading_order_declaration
 
 
 SYSTEM_PROMPT = (
@@ -42,6 +43,7 @@ def run_task(
     verbose: bool = True,
     include_summary: bool = True,
     enable_snapshot: bool = True,
+    declare_reading_order: bool = True,
 ) -> str:
     """Run a single task through the ReAct loop and return the final answer.
 
@@ -67,9 +69,18 @@ def run_task(
         if needs_clarification and questions:
             return _format_clarifying_questions(questions)
 
+    system_prompt = SYSTEM_PROMPT
+    if declare_reading_order:
+        task_type = classify_task(task, client)
+        declaration = reading_order_declaration(task_type)
+        if declaration is not None:
+            if verbose:
+                print(declaration)
+            system_prompt = SYSTEM_PROMPT + " " + declaration
+
     record = TaskRecord()
     messages: list[dict[str, Any]] = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": task},
     ]
 

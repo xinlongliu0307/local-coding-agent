@@ -121,7 +121,12 @@ def test_ask_mode_proceeds_when_brief_is_adequate(tmp_path):
     )
     session = ApprovalSession(Mode.ASK, lambda n, a: True, lambda: True)
     result = run_task(
-        "A fully specified task.", model=client, session=session, verbose=False
+        "A fully specified task.",
+        model=client,
+        session=session,
+        verbose=False,
+        include_summary=False,
+        declare_reading_order=False,
     )
     assert result == "Done."
     assert target.read_text() == "x"

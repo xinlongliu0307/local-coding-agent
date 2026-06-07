@@ -97,6 +97,8 @@ def test_loop_performs_write_when_approved(tmp_path):
         model=fake,
         session=_careful_session(),
         verbose=False,
+        include_summary=False,
+        declare_reading_order=False,
     )
     assert result == "I created the file."
     assert target.read_text() == "data"
@@ -125,6 +127,8 @@ def test_loop_skips_write_when_denied(tmp_path):
         model=fake,
         session=_careful_session(per_call=deny_all, batch=deny_batch),
         verbose=False,
+        include_summary=False,
+        declare_reading_order=False,
     )
     assert result == "I understand, I will not create it."
     assert not target.exists()

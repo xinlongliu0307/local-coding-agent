@@ -80,7 +80,12 @@ def test_loop_performs_edit_when_approved(tmp_path):
     )
     session = ApprovalSession(Mode.CAREFUL, lambda n, a: True, lambda: True)
     result = run_task(
-        "Update the greeting.", model=fake, session=session, verbose=False
+        "Update the greeting.",
+        model=fake,
+        session=session,
+        verbose=False,
+        include_summary=False,
+        declare_reading_order=False,
     )
     assert result == "I updated the greeting."
     assert target.read_text() == "greeting = 'goodbye'\n"
@@ -111,7 +116,12 @@ def test_loop_skips_edit_when_denied(tmp_path):
     )
     session = ApprovalSession(Mode.CAREFUL, lambda n, a: False, lambda: False)
     result = run_task(
-        "Update the greeting.", model=fake, session=session, verbose=False
+        "Update the greeting.",
+        model=fake,
+        session=session,
+        verbose=False,
+        include_summary=False,
+        declare_reading_order=False,
     )
     assert result == "I left the file unchanged."
     assert target.read_text() == "greeting = 'hello'\n"

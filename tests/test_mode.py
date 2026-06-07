@@ -90,7 +90,14 @@ def test_careful_mode_asks_on_every_mutating_call(tmp_path):
     session = ApprovalSession(Mode.CAREFUL, per_call, batch)
     fake = FakeModelClient(_two_write_then_finish(str(file_a), str(file_b)))
 
-    result = run_task("Create two files.", model=fake, session=session, verbose=False)
+    result = run_task(
+        "Create two files.",
+        model=fake,
+        session=session,
+        verbose=False,
+        include_summary=False,
+        declare_reading_order=False,
+    )
 
     assert result == "Both files created."
     assert per_call.calls == 2
@@ -107,7 +114,14 @@ def test_routine_mode_asks_once_for_multiple_mutations(tmp_path):
     session = ApprovalSession(Mode.ROUTINE, per_call, batch)
     fake = FakeModelClient(_two_write_then_finish(str(file_a), str(file_b)))
 
-    result = run_task("Create two files.", model=fake, session=session, verbose=False)
+    result = run_task(
+        "Create two files.",
+        model=fake,
+        session=session,
+        verbose=False,
+        include_summary=False,
+        declare_reading_order=False,
+    )
 
     assert result == "Both files created."
     assert batch.calls == 1
@@ -124,7 +138,14 @@ def test_routine_mode_denial_blocks_all_mutations(tmp_path):
     session = ApprovalSession(Mode.ROUTINE, per_call, batch)
     fake = FakeModelClient(_two_write_then_finish(str(file_a), str(file_b)))
 
-    result = run_task("Create two files.", model=fake, session=session, verbose=False)
+    result = run_task(
+        "Create two files.",
+        model=fake,
+        session=session,
+        verbose=False,
+        include_summary=False,
+        declare_reading_order=False,
+    )
 
     assert result == "Both files created."
     assert batch.calls == 1

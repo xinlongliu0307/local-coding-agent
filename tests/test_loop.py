@@ -32,7 +32,13 @@ def test_loop_returns_text_when_no_tool_called():
             {"content": "The answer is 42.", "tool_calls": None},
         ]
     )
-    result = run_task("What is the answer?", model=fake, verbose=False)
+    result = run_task(
+        "What is the answer?",
+        model=fake,
+        verbose=False,
+        include_summary=False,
+        declare_reading_order=False,
+    )
     assert result == "The answer is 42."
     assert fake.calls == 1
 
@@ -54,7 +60,13 @@ def test_loop_executes_tool_then_returns_final_answer():
             {"content": "I listed the files.", "tool_calls": None},
         ]
     )
-    result = run_task("List the files.", model=fake, verbose=False)
+    result = run_task(
+        "List the files.",
+        model=fake,
+        verbose=False,
+        include_summary=False,
+        declare_reading_order=False,
+    )
     assert result == "I listed the files."
     assert fake.calls == 2
 
@@ -71,7 +83,13 @@ def test_loop_handles_unknown_tool_gracefully():
             {"content": "I could not use that tool.", "tool_calls": None},
         ]
     )
-    result = run_task("Do something impossible.", model=fake, verbose=False)
+    result = run_task(
+        "Do something impossible.",
+        model=fake,
+        verbose=False,
+        include_summary=False,
+        declare_reading_order=False,
+    )
     assert result == "I could not use that tool."
     assert fake.calls == 2
 
@@ -86,7 +104,13 @@ def test_loop_detects_tool_call_embedded_in_content():
             {"content": "I listed the files.", "tool_calls": None},
         ]
     )
-    result = run_task("List the files.", model=fake, verbose=False)
+    result = run_task(
+        "List the files.",
+        model=fake,
+        verbose=False,
+        include_summary=False,
+        declare_reading_order=False,
+    )
     assert result == "I listed the files."
     assert fake.calls == 2
 
@@ -108,7 +132,12 @@ def test_loop_detects_multiple_tool_calls_embedded_in_content(tmp_path):
     )
     session = ApprovalSession(Mode.CAREFUL, lambda n, a: True, lambda: True)
     result = run_task(
-        "Create two files.", model=fake, session=session, verbose=False
+        "Create two files.",
+        model=fake,
+        session=session,
+        verbose=False,
+        include_summary=False,
+        declare_reading_order=False,
     )
     assert result == "Both files created."
     assert file_a.read_text() == "a"
