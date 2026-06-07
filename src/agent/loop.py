@@ -14,7 +14,10 @@ from agent.approval import (
 from agent.clarify import assess_brief
 from agent.mode import CLARIFYING_MODES, Mode, cadence_for
 from agent.model import ModelClient
+from agent.record import TaskRecord
+from agent.summary import build_summary
 from agent.tools.registry import TOOL_FUNCTIONS, TOOL_SCHEMAS
+from agent.snapshot import prune_old_snapshots, take_snapshot
 
 
 SYSTEM_PROMPT = (
@@ -37,15 +40,16 @@ def run_task(
     model: ModelClient | None = None,
     session: ApprovalSession | None = None,
     verbose: bool = True,
+    include_summary: bool = True,
+    enable_snapshot: bool = True,
 ) -> str:
     """Run a single task through the ReAct loop and return the final answer.
 
-    When the mode triggers clarification and the brief is judged
-    underspecified, the loop presents clarifying questions and returns
-    without performing work, inviting the user to supply a fuller brief. The
-    mode otherwise determines the approval cadence: careful and ask modes
-    approve each mutating action individually, while routine mode approves
-    mutating actions once for the whole task.
+    A task record is maintained throughout, and unless include_summary is
+    False, a structured self-summary of files created and modified, tools
+    invoked, and actions declined is appended to the returned result. When
+    the mode triggers clarification and the brief is judged underspecified,
+    the loop returns clarifying questions without performing work.
     """
     client = model or ModelClient()
     approval = session or ApprovalSession(
@@ -63,11 +67,13 @@ def run_task(
         if needs_clarification and questions:
             return _format_clarifying_questions(questions)
 
+    record = TaskRecord()
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": task},
     ]
 
+    final_text = ""
     for iteration in range(1, MAX_ITERATIONS + 1):
         if verbose:
             print(f"\n--- Iteration {iteration} ---")
@@ -85,7 +91,7 @@ def run_task(
             final_text = message.get("content", "")
             if verbose:
                 print(f"Model produced final answer:\n{final_text}")
-            return final_text
+            break
 
         for call in tool_calls:
             function = call.get("function", {})
@@ -96,7 +102,10 @@ def run_task(
             if verbose:
                 print(f"Model requested tool: {name}({arguments})")
 
-            if not approval.is_approved(name, arguments):
+            existed_before = record.note_pre_state(name, arguments)
+            approved = approval.is_approved(name, arguments)
+
+            if not approved:
                 result = (
                     f"The user declined to approve the '{name}' action. "
                     "It was not performed."
@@ -108,12 +117,24 @@ def run_task(
                 if verbose:
                     print(f"Tool result:\n{result}")
 
+            record.add_event(name, arguments, approved, result, existed_before)
             messages.append({"role": "tool", "content": result})
+    else:
+        final_text = (
+            "The task did not complete within the iteration limit. "
+            "The conversation may require a higher limit or a clearer task."
+        )
 
-    return (
-        "The task did not complete within the iteration limit. "
-        "The conversation may require a higher limit or a clearer task."
-    )
+    if enable_snapshot:
+        changed = record.created_files + record.modified_files
+        snapshot_dir = take_snapshot(changed)
+        prune_old_snapshots()
+        if verbose and snapshot_dir is not None:
+            print(f"\nSnapshot of changed files saved to: {snapshot_dir}")
+
+    if include_summary:
+        return final_text + "\n" + build_summary(record)
+    return final_text
 
 
 def _format_clarifying_questions(questions: list[str]) -> str:
