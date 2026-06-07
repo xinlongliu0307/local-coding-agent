@@ -4,19 +4,17 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Callable
+from typing import Any
 
 from agent.approval import (
     ApprovalSession,
     batch_console_approver,
     console_approver,
 )
-from agent.mode import Mode, cadence_for
+from agent.clarify import assess_brief
+from agent.mode import CLARIFYING_MODES, Mode, cadence_for
 from agent.model import ModelClient
 from agent.tools.registry import TOOL_FUNCTIONS, TOOL_SCHEMAS
-
-from agent.approval import ApprovalSession
-from agent.mode import Mode
 
 
 SYSTEM_PROMPT = (
@@ -42,11 +40,12 @@ def run_task(
 ) -> str:
     """Run a single task through the ReAct loop and return the final answer.
 
-    The mode is declared at the start of the task and determines the approval
-    cadence. Careful mode approves each mutating action individually; routine
-    mode approves mutating actions once for the whole task. A custom approval
-    session may be supplied to override the default console-based approvers,
-    which is used in testing.
+    When the mode triggers clarification and the brief is judged
+    underspecified, the loop presents clarifying questions and returns
+    without performing work, inviting the user to supply a fuller brief. The
+    mode otherwise determines the approval cadence: careful and ask modes
+    approve each mutating action individually, while routine mode approves
+    mutating actions once for the whole task.
     """
     client = model or ModelClient()
     approval = session or ApprovalSession(
@@ -58,6 +57,11 @@ def run_task(
     if verbose:
         print(f"Operating mode: {approval.mode.value}")
         print(f"Approval cadence: {cadence_for(approval.mode)}")
+
+    if approval.mode in CLARIFYING_MODES:
+        needs_clarification, questions = assess_brief(task, client)
+        if needs_clarification and questions:
+            return _format_clarifying_questions(questions)
 
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -112,16 +116,21 @@ def run_task(
     )
 
 
-def _extract_embedded_tool_calls(content: str) -> list[dict[str, Any]]:
-    """Detect one or more tool-call JSON objects embedded in text content.
+def _format_clarifying_questions(questions: list[str]) -> str:
+    """Format clarifying questions for presentation to the user."""
+    lines = [
+        "Before proceeding, the task needs clarification on the following:",
+    ]
+    for index, question in enumerate(questions, start=1):
+        lines.append(f"{index}. {question}")
+    lines.append(
+        "Please re-run the task with these details included in the brief."
+    )
+    return "\n".join(lines)
 
-    Smaller models sometimes emit tool calls as JSON in the content field
-    rather than using the structured tool_calls field, and may emit several
-    such objects in a single response. This finds every top-level JSON object
-    in the content, parses each, and returns those that name a known tool,
-    normalised into the structured tool-call shape. Returns an empty list if
-    none are found.
-    """
+
+def _extract_embedded_tool_calls(content: str) -> list[dict[str, Any]]:
+    """Detect one or more tool-call JSON objects embedded in text content."""
     if not content:
         return []
 
@@ -163,26 +172,3 @@ def _dispatch_tool(name: str, arguments: dict[str, Any]) -> str:
         return function(**arguments)
     except TypeError as error:
         return f"Error calling '{name}': {error}"
-
-def test_loop_detects_multiple_tool_calls_embedded_in_content(tmp_path):
-    file_a = tmp_path / "a.txt"
-    file_b = tmp_path / "b.txt"
-    content = (
-        f'{{"name": "write_file", "arguments": {{"path": "{file_a}", '
-        f'"content": "a"}}}}\n'
-        f'{{"name": "write_file", "arguments": {{"path": "{file_b}", '
-        f'"content": "b"}}}}'
-    )
-    fake = FakeModelClient(
-        [
-            {"content": content, "tool_calls": None},
-            {"content": "Both files created.", "tool_calls": None},
-        ]
-    )
-    session = ApprovalSession(Mode.CAREFUL, lambda n, a: True, lambda: True)
-    result = run_task(
-        "Create two files.", model=fake, session=session, verbose=False
-    )
-    assert result == "Both files created."
-    assert file_a.read_text() == "a"
-    assert file_b.read_text() == "b"

@@ -10,7 +10,7 @@ from agent.mode import Mode
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print('Usage: python -m agent "your task here" [careful|routine]')
+        print('Usage: python -m agent "your task here" [careful|routine|ask]')
         sys.exit(1)
 
     task = sys.argv[1]
