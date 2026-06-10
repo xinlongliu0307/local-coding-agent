@@ -8,6 +8,8 @@ from agent.tools.list_files import list_files
 from agent.tools.read_file import read_file
 from agent.tools.write_file import write_file
 from agent.tools.edit_file import edit_file
+from agent.tools.search_files import search_files
+from agent.tools.run_command import run_command
 
 
 # The callable implementation for each tool, keyed by tool name.
@@ -16,6 +18,8 @@ TOOL_FUNCTIONS: dict[str, Callable[..., str]] = {
     "read_file": read_file,
     "write_file": write_file,
     "edit_file": edit_file,
+    "search_files": search_files,
+    "run_command": run_command,
 }
 
 
@@ -24,6 +28,7 @@ TOOL_FUNCTIONS: dict[str, Callable[..., str]] = {
 MUTATING_TOOLS: set[str] = {
     "write_file",
     "edit_file",
+    "run_command",
 }
 
 
@@ -127,6 +132,55 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                     },
                 },
                 "required": ["path", "old_string", "new_string"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_files",
+            "description": (
+                "Search file contents under a directory for a literal "
+                "substring. Returns 'path:line: text' matches, capped at 50. "
+                "Read-only and safe."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The literal text to search for.",
+                    },
+                    "directory": {
+                        "type": "string",
+                        "description": (
+                            "The directory to search under. Defaults to the "
+                            "current directory."
+                        ),
+                    },
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "run_command",
+            "description": (
+                "Run a shell command and return its exit code and output. "
+                "Use this to run tests or inspect the environment. Every "
+                "invocation requires user approval."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "command": {
+                        "type": "string",
+                        "description": "The shell command to run.",
+                    },
+                },
+                "required": ["command"],
             },
         },
     },
