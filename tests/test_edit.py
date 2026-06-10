@@ -38,7 +38,7 @@ def test_edit_refuses_when_target_absent(tmp_path):
     target = tmp_path / "code.py"
     target.write_text("x = 1\n")
     result = edit_file(str(target), "not present", "replacement")
-    assert "not found" in result
+    assert "EDIT_TARGET_NOT_FOUND" in result
     assert target.read_text() == "x = 1\n"
 
 

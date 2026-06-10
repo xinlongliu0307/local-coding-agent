@@ -29,7 +29,10 @@ SYSTEM_PROMPT = (
     "and require user approval; if an action is declined, do not retry it "
     "without changing your approach. When you have enough information to "
     "answer or have completed the task, respond with plain text and do not "
-    "call further tools."
+    "call further tools. "
+    "Critical rule: before calling edit_file on any file, you MUST first "
+    "call read_file on that file in a previous step. Never call edit_file "
+    "with an old_string you have not copied verbatim from read_file output."
 )
 
 MAX_ITERATIONS = 10

@@ -21,8 +21,9 @@ def edit_file(path: str, old_string: str, new_string: str) -> str:
     occurrences = original.count(old_string)
     if occurrences == 0:
         return (
-            f"No change made: the specified text was not found in '{path}'. "
-            "Provide the exact existing text, including whitespace."
+            f"EDIT_TARGET_NOT_FOUND in '{path}'. The specified text is not "
+            "present. Here are the actual current contents of the file so you "
+            f"can retry with an exact old_string:\n---\n{original}\n---"
         )
     if occurrences > 1:
         return (
