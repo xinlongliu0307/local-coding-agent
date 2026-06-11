@@ -1,0 +1,5 @@
+{
+  "name": "diagnose_offbyone_window",
+  "kind": "diagnostic",
+  "brief": "The last_n function in window.py is supposed to return the last n elements of a list, in their original order. It returns the wrong result: last_n([1, 2, 3, 4, 5], 3) should return [3, 4, 5] but it does not. Find and fix the bug."
+}

@@ -65,3 +65,25 @@ def test_diagnose_check_passes_on_fixed_workspace(tmp_path):
         text=True,
     )
     assert completed.returncode == 0
+
+
+def test_offbyone_check_passes_on_fixed_workspace(tmp_path):
+    fixed = (
+        "def last_n(values, n):\n"
+        '    """Return the last n elements of values, in original order."""\n'
+        "    result = []\n"
+        "    for i in range(len(values) - n, len(values)):\n"
+        "        result.append(values[i])\n"
+        "    return result\n"
+    )
+    (tmp_path / "window.py").write_text(fixed)
+    check = os.path.join(TASKS_DIR, "04_diagnose_offbyone", "check.py")
+    with open(check, "r", encoding="utf-8") as handle:
+        (tmp_path / "_check.py").write_text(handle.read())
+    completed = subprocess.run(
+        [sys.executable, "_check.py"],
+        cwd=str(tmp_path),
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0
