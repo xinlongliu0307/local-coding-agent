@@ -28,12 +28,12 @@ Two models were compared, both served locally via Ollama:
 Pass rates below are taken from the full recorded history across all runs
 during development, not from any single run.
 
-| Task kind     | qwen2.5-coder:7b            | qwen2.5-coder:32b           |
-| ------------- | --------------------------- | --------------------------- |
-| scaffolding   | [FILL: 7B scaffolding p/n]  | [FILL: 32B scaffolding p/n] |
-| modification  | [FILL: 7B modification p/n] | [FILL: 32B modification p/n]|
-| diagnostic    | [FILL: 7B diagnostic p/n]   | [FILL: 32B diagnostic p/n]  |
-| **total**     | [FILL: 7B total p/n]        | [FILL: 32B total p/n]       |
+| Task kind     | qwen2.5-coder:7b | qwen2.5-coder:32b |
+| ------------- | ---------------- | ----------------- |
+| scaffolding   | 9/9              | 2/2               |
+| modification  | 1/9              | 2/2               |
+| diagnostic    | 6/9              | 1/2               |
+| **total**     | 16/27            | 5/6               |
 
 Approximate per-task wall-clock times varied with system load and with
 whether a model was already resident in memory; the larger model was
