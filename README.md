@@ -8,9 +8,13 @@ domain during development.
 
 ## Status
 
-In design phase. No implementation exists yet. This repository
-currently contains the design requirements document that specifies the
-agent's intended behaviour. Implementation begins in Phase One.
+The implementation roadmap is complete. The agent reads before
+acting with a task-typed reading order, operates under a three-mode
+approval disposition, clarifies underspecified briefs, edits under a
+uniqueness safeguard, runs searches and shell commands behind an approval
+gate, reports a factual self-summary, and snapshots every file it changes.
+An evaluation harness scores it against scaffolding, modification, and
+diagnostic tasks; see benchmarks/RESULTS.md.
 
 ## Design
 
@@ -31,21 +35,49 @@ for later resolution.
 
 ## Roadmap
 
-The project follows an eight-phase build plan. Phase Zero, covering
-design and reference-agent evaluation, is complete with this commit.
-Phase One will begin implementation in Python using a minimal ReAct
-loop against a local Ollama server. Subsequent phases will add file
-manipulation tools, persistent context, sandboxing and approval
-policies, multi-file indexing, MCP client support, a textual TUI,
-and an evaluation harness. The detailed roadmap will be added to
-this README as phases are completed.
+The project followed a phased build plan, beginning with Phase Zero
+(design and reference-agent evaluation) and proceeding through
+implementation in Python using a ReAct loop against a local Ollama
+server. The implemented phases delivered, in sequence: the model
+client and a minimal loop; file inspection, writing, and a targeted
+edit tool guarded by a uniqueness safeguard; an approval gate with a
+three-mode disposition and mode-aware cadence; a clarifying-question
+protocol for underspecified briefs; a factual self-summary; automatic
+snapshotting with retention pruning; task-typed reading-order
+declaration; search and approval-gated command execution; and an
+evaluation harness. All implementation phases are complete and
+committed.
+
+Work beyond this point is open-ended extension rather than roadmap
+completion. Candidate directions include broadening the benchmark set —
+notably a second diagnostic task with an unambiguous bug, prompted by
+the specification ambiguity recorded in `benchmarks/RESULTS.md` — and
+resilience work for long multi-iteration conversations.
 
 ## Contributing
 
-Contributions are not yet accepted. The project is at the design stage
-and the maintainer is still working out the architecture. The
-repository will become contribution-ready when Phase One is complete.
+The implementation phases are complete, and the architecture is stable.
+The project is a personal portfolio effort; issues and observations are
+welcome, though the maintainer makes no commitment to accept external
+contributions.
 
 ## License
 
 Apache 2.0. See `LICENSE` for details.
+
+## Benchmarks
+
+A small evaluation harness lives in `benchmarks/`. It runs the agent against
+three tasks — scaffolding, modification, and diagnostic — each scored by a
+check script that asserts on file content as well as behaviour. Run all
+tasks with:
+
+    .venv/bin/python -m benchmarks.run
+
+An optional model name may be supplied to compare models:
+
+    .venv/bin/python -m benchmarks.run qwen2.5-coder:32b
+
+Results are appended to `benchmarks/results.jsonl` (not tracked in version
+control). A written comparison of two models, including two findings on
+model capability and benchmark design, is in `benchmarks/RESULTS.md`.
