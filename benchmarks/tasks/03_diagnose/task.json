@@ -1,5 +1,5 @@
 {
   "name": "diagnose_variance_bug",
   "kind": "diagnostic",
-  "brief": "The variance function in stats.py returns wrong values: variance([1, 2, 3]) should be close to 0.6667 but it is not. Find and fix the bug."
+  "brief": "The variance function in stats.py is supposed to compute the POPULATION variance (dividing by N, not N-1). It returns wrong values: variance([1, 2, 3]) should equal 0.6667. Find and fix the bug so it divides the sum of squared deviations by len(values)."
 }
