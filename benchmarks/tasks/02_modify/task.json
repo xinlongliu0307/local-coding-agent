@@ -1,0 +1,5 @@
+{
+  "name": "modify_greeting_punctuation",
+  "kind": "modification",
+  "brief": "In greeter.py, change the greet function so it ends the greeting with a period instead of an exclamation mark. Make a clean, minimal edit: the final file must not contain any leftover or duplicated lines."
+}

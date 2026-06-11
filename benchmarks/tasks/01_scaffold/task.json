@@ -1,0 +1,5 @@
+{
+  "name": "scaffold_temperature_module",
+  "kind": "scaffolding",
+  "brief": "Create a file called temperature.py containing two functions: celsius_to_fahrenheit(c) which returns c * 9 / 5 + 32, and fahrenheit_to_celsius(f) which returns (f - 32) * 5 / 9. Do not create any other files."
+}
