@@ -19,6 +19,7 @@ from agent.summary import build_summary
 from agent.tools.registry import TOOL_FUNCTIONS, TOOL_SCHEMAS
 from agent.snapshot import prune_old_snapshots, take_snapshot
 from agent.reading_order import classify_task, reading_order_declaration
+from agent.history import needs_condensation, condense_history
 
 
 SYSTEM_PROMPT = (
@@ -47,6 +48,7 @@ def run_task(
     include_summary: bool = True,
     enable_snapshot: bool = True,
     declare_reading_order: bool = True,
+    enable_condensation: bool = True,
 ) -> str:
     """Run a single task through the ReAct loop and return the final answer.
 
@@ -92,7 +94,12 @@ def run_task(
         if verbose:
             print(f"\n--- Iteration {iteration} ---")
 
+        if enable_condensation and needs_condensation(messages):
+            messages = condense_history(messages)
+            if verbose:
+                print("[Conversation condensed to stay within context.]")
         message = client.chat(messages, tools=TOOL_SCHEMAS)
+        
         messages.append(message)
 
         tool_calls = message.get("tool_calls")
