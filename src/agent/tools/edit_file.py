@@ -1,6 +1,7 @@
 """A mutating tool that replaces an exact, unique string within a file."""
 
 from __future__ import annotations
+from agent.workspace import resolve_within_workspace, PathOutsideWorkspace
 
 
 def edit_file(path: str, old_string: str, new_string: str) -> str:
@@ -12,6 +13,11 @@ def edit_file(path: str, old_string: str, new_string: str) -> str:
     unchanged and an explanatory message is returned so the agent can adjust
     by supplying more surrounding context to make the target unique.
     """
+    try:
+        path = resolve_within_workspace(path)
+    except PathOutsideWorkspace as error:
+        return f"PATH_REFUSED: {error}"
+        
     try:
         with open(path, "r", encoding="utf-8") as handle:
             original = handle.read()

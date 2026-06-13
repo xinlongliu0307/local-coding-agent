@@ -115,9 +115,9 @@ def test_loop_detects_tool_call_embedded_in_content():
     assert fake.calls == 2
 
 
-def test_loop_detects_multiple_tool_calls_embedded_in_content(tmp_path):
-    file_a = tmp_path / "a.txt"
-    file_b = tmp_path / "b.txt"
+def test_loop_detects_multiple_tool_calls_embedded_in_content(workspace):
+    file_a = workspace / "a.txt"
+    file_b = workspace / "b.txt"
     content = (
         f'{{"name": "write_file", "arguments": {{"path": "{file_a}", '
         f'"content": "a"}}}}\n'

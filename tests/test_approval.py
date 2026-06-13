@@ -49,15 +49,15 @@ def _careful_session(
     return ApprovalSession(Mode.CAREFUL, per_call, batch)
 
 
-def test_write_file_then_read_file_round_trip(tmp_path):
-    target = tmp_path / "note.txt"
+def test_write_file_then_read_file_round_trip(workspace):
+    target = workspace / "note.txt"
     write_result = write_file(str(target), "hello world")
     assert "Wrote" in write_result
     assert read_file(str(target)) == "hello world"
 
 
-def test_read_file_reports_missing_file():
-    result = read_file("/path/that/does/not/exist")
+def test_read_file_reports_missing_file(workspace):
+    result = read_file(str(workspace / "does_not_exist.txt"))
     assert "Error" in result
 
 
@@ -74,8 +74,8 @@ def test_session_refers_mutating_tool_to_approver():
     assert approving.is_approved("write_file", {"path": "x", "content": "y"}) is True
 
 
-def test_loop_performs_write_when_approved(tmp_path):
-    target = tmp_path / "created.txt"
+def test_loop_performs_write_when_approved(workspace):
+    target = workspace / "note.txt"
     fake = FakeModelClient(
         [
             {
@@ -104,8 +104,8 @@ def test_loop_performs_write_when_approved(tmp_path):
     assert target.read_text() == "data"
 
 
-def test_loop_skips_write_when_denied(tmp_path):
-    target = tmp_path / "should_not_exist.txt"
+def test_loop_skips_write_when_denied(workspace):
+    target = workspace / "should_not_exist.txt"
     fake = FakeModelClient(
         [
             {

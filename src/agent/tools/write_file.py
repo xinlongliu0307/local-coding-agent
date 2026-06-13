@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 
+from agent.workspace import resolve_within_workspace, PathOutsideWorkspace
+
 
 def write_file(path: str, content: str) -> str:
     """Write the given content to the file at the given path.
@@ -13,6 +15,12 @@ def write_file(path: str, content: str) -> str:
     parent directories in the path are created as needed. Returns a short
     confirmation describing what was written, or an error string on failure.
     """
+
+    try:
+        path = resolve_within_workspace(path)
+    except PathOutsideWorkspace as error:
+        return f"PATH_REFUSED: {error}"
+
     try:
         directory = os.path.dirname(path)
         if directory:

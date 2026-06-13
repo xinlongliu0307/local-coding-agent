@@ -20,6 +20,7 @@ from agent.tools.registry import TOOL_FUNCTIONS, TOOL_SCHEMAS
 from agent.snapshot import prune_old_snapshots, take_snapshot
 from agent.reading_order import classify_task, reading_order_declaration
 from agent.history import needs_condensation, condense_history
+from agent.workspace import set_workspace_root
 
 
 SYSTEM_PROMPT = (
@@ -49,6 +50,7 @@ def run_task(
     enable_snapshot: bool = True,
     declare_reading_order: bool = True,
     enable_condensation: bool = True,
+    workspace_root: str | None = None,
 ) -> str:
     """Run a single task through the ReAct loop and return the final answer.
 
@@ -64,6 +66,11 @@ def run_task(
         per_call_approver=console_approver,
         batch_approver=batch_console_approver,
     )
+
+    if workspace_root is not None:
+        set_workspace_root(workspace_root)
+        if verbose:
+            print(f"Workspace confined to: {workspace_root}")
 
     if verbose:
         print(f"Operating mode: {approval.mode.value}")

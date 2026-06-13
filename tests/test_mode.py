@@ -82,9 +82,9 @@ def test_cadence_description_differs_by_mode():
     assert "batched" in cadence_for(Mode.ROUTINE)
 
 
-def test_careful_mode_asks_on_every_mutating_call(tmp_path):
-    file_a = tmp_path / "a.txt"
-    file_b = tmp_path / "b.txt"
+def test_careful_mode_asks_on_every_mutating_call(workspace):
+    file_a = workspace / "a.txt"
+    file_b = workspace / "b.txt"
     per_call = CountingApprover(decision=True)
     batch = CountingBatchApprover(decision=True)
     session = ApprovalSession(Mode.CAREFUL, per_call, batch)
@@ -106,9 +106,9 @@ def test_careful_mode_asks_on_every_mutating_call(tmp_path):
     assert file_b.read_text() == "b"
 
 
-def test_routine_mode_asks_once_for_multiple_mutations(tmp_path):
-    file_a = tmp_path / "a.txt"
-    file_b = tmp_path / "b.txt"
+def test_routine_mode_asks_once_for_multiple_mutations(workspace):
+    file_a = workspace / "a.txt"
+    file_b = workspace / "b.txt"
     per_call = CountingApprover(decision=True)
     batch = CountingBatchApprover(decision=True)
     session = ApprovalSession(Mode.ROUTINE, per_call, batch)
@@ -130,9 +130,9 @@ def test_routine_mode_asks_once_for_multiple_mutations(tmp_path):
     assert file_b.read_text() == "b"
 
 
-def test_routine_mode_denial_blocks_all_mutations(tmp_path):
-    file_a = tmp_path / "a.txt"
-    file_b = tmp_path / "b.txt"
+def test_routine_mode_denial_blocks_all_mutations(workspace):
+    file_a = workspace / "a.txt"
+    file_b = workspace / "b.txt"
     per_call = CountingApprover(decision=True)
     batch = CountingBatchApprover(decision=False)
     session = ApprovalSession(Mode.ROUTINE, per_call, batch)

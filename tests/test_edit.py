@@ -26,37 +26,37 @@ class FakeModelClient:
         return self._responses.pop(0)
 
 
-def test_edit_replaces_unique_occurrence(tmp_path):
-    target = tmp_path / "code.py"
+def test_edit_replaces_unique_occurrence(workspace):
+    target = workspace / "code.py"
     target.write_text("x = 1\ny = 2\nz = 3\n")
     result = edit_file(str(target), "y = 2", "y = 20")
     assert "Replaced one occurrence" in result
     assert target.read_text() == "x = 1\ny = 20\nz = 3\n"
 
 
-def test_edit_refuses_when_target_absent(tmp_path):
-    target = tmp_path / "code.py"
+def test_edit_refuses_when_target_absent(workspace):
+    target = workspace / "code.py"
     target.write_text("x = 1\n")
     result = edit_file(str(target), "not present", "replacement")
     assert "EDIT_TARGET_NOT_FOUND" in result
     assert target.read_text() == "x = 1\n"
 
 
-def test_edit_refuses_when_target_ambiguous(tmp_path):
-    target = tmp_path / "code.py"
+def test_edit_refuses_when_target_ambiguous(workspace):
+    target = workspace / "code.py"
     target.write_text("value = 1\nvalue = 1\n")
     result = edit_file(str(target), "value = 1", "value = 2")
     assert "ambiguous" in result
     assert target.read_text() == "value = 1\nvalue = 1\n"
 
 
-def test_edit_reports_missing_file():
-    result = edit_file("/path/that/does/not/exist", "a", "b")
+def test_edit_reports_missing_file(workspace):
+    result = edit_file(str(workspace / "does_not_exist.py"), "a", "b")
     assert "Error" in result
 
 
-def test_loop_performs_edit_when_approved(tmp_path):
-    target = tmp_path / "code.py"
+def test_loop_performs_edit_when_approved(workspace):
+    target = workspace / "code.py"
     target.write_text("greeting = 'hello'\n")
     fake = FakeModelClient(
         [
@@ -91,8 +91,8 @@ def test_loop_performs_edit_when_approved(tmp_path):
     assert target.read_text() == "greeting = 'goodbye'\n"
 
 
-def test_loop_skips_edit_when_denied(tmp_path):
-    target = tmp_path / "code.py"
+def test_loop_skips_edit_when_denied(workspace):
+    target = workspace / "code.py"
     target.write_text("greeting = 'hello'\n")
     fake = FakeModelClient(
         [

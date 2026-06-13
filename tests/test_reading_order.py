@@ -84,8 +84,8 @@ def test_declaration_is_none_for_other():
     assert reading_order_declaration(TaskType.OTHER) is None
 
 
-def test_loop_proceeds_after_classifying_task(tmp_path):
-    target = tmp_path / "code.py"
+def test_loop_proceeds_after_classifying_task(workspace):
+    target = workspace / "code.py"
     target.write_text("greeting = 'hello'\n")
     client = SequenceClient(
         [

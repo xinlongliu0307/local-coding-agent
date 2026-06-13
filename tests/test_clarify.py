@@ -100,8 +100,8 @@ def test_ask_mode_returns_questions_without_working():
     assert client.calls == 1
 
 
-def test_ask_mode_proceeds_when_brief_is_adequate(tmp_path):
-    target = tmp_path / "out.txt"
+def test_ask_mode_proceeds_when_brief_is_adequate(workspace):
+    target = workspace / "out.txt"
     client = SequenceClient(
         [
             {"content": '{"needs_clarification": false, "questions": []}'},

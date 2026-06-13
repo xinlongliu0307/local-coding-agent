@@ -41,8 +41,8 @@ def _write_call(path: str, content: str) -> dict[str, Any]:
     }
 
 
-def test_record_classifies_created_file(tmp_path):
-    target = tmp_path / "new.txt"
+def test_record_classifies_created_file(workspace):
+    target = workspace / "new.txt"
     record = TaskRecord()
     existed = record.note_pre_state("write_file", {"path": str(target)})
     record.add_event(
@@ -56,8 +56,8 @@ def test_record_classifies_created_file(tmp_path):
     assert str(target) not in record.modified_files
 
 
-def test_record_classifies_modified_file(tmp_path):
-    target = tmp_path / "existing.txt"
+def test_record_classifies_modified_file(workspace):
+    target = workspace / "existing.txt"
     target.write_text("original")
     record = TaskRecord()
     existed = record.note_pre_state("write_file", {"path": str(target)})
@@ -103,8 +103,8 @@ def test_summary_reports_none_for_empty_categories():
     assert "Actions declined by the user: none" in summary
 
 
-def test_loop_appends_summary_reflecting_created_file(tmp_path):
-    target = tmp_path / "made.txt"
+def test_loop_appends_summary_reflecting_created_file(workspace):
+    target = workspace / "made.txt"
     fake = FakeModelClient(
         [
             _write_call(str(target), "data"),
