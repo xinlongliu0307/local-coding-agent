@@ -17,7 +17,7 @@ from agent.model import ModelClient
 from agent.record import TaskRecord
 from agent.summary import build_summary
 from agent.tools.registry import TOOL_FUNCTIONS, TOOL_SCHEMAS
-from agent.snapshot import prune_old_snapshots, take_snapshot
+from agent.snapshot import prune_old_snapshots, snapshot_failures, take_snapshot
 from agent.reading_order import classify_task, reading_order_declaration
 from agent.history import needs_condensation, condense_history
 from agent.workspace import set_workspace_root
@@ -173,6 +173,12 @@ def run_task(
         prune_old_snapshots()
         if verbose and snapshot_dir is not None:
             print(f"\nSnapshot of changed files saved to: {snapshot_dir}")
+            failed = snapshot_failures(snapshot_dir)
+            if failed:
+                print(
+                    "WARNING: these files could not be captured in the "
+                    "snapshot and are NOT protected: " + ", ".join(failed)
+                )
 
     if include_summary:
         return final_text + "\n" + build_summary(record)

@@ -5,7 +5,9 @@ from __future__ import annotations
 import os
 import time
 
-from agent.snapshot import prune_old_snapshots, take_snapshot
+import json
+
+from agent.snapshot import prune_old_snapshots, restore_snapshot, take_snapshot
 
 
 def test_snapshot_captures_file_content(tmp_path):
@@ -16,10 +18,11 @@ def test_snapshot_captures_file_content(tmp_path):
     snapshot_dir = take_snapshot([str(source)], snapshot_root=str(root))
 
     assert snapshot_dir is not None
-    captured = os.path.join(snapshot_dir, "file.txt")
-    assert os.path.isfile(captured)
-    with open(captured, "r", encoding="utf-8") as handle:
-        assert handle.read() == "captured content"
+    # Verify capture through restoration rather than internal storage names:
+    # overwrite the file, restore, and confirm the original content returns.
+    source.write_text("changed")
+    restore_snapshot(snapshot_dir)
+    assert source.read_text() == "captured content"
 
 
 def test_snapshot_skips_nonexistent_files(tmp_path):
@@ -33,7 +36,13 @@ def test_snapshot_skips_nonexistent_files(tmp_path):
     )
 
     assert snapshot_dir is not None
-    assert os.path.isfile(os.path.join(snapshot_dir, "real.txt"))
+    with open(
+        os.path.join(snapshot_dir, "manifest.json"), encoding="utf-8"
+    ) as handle:
+        manifest = json.load(handle)
+    captured_originals = manifest["captured"].values()
+    assert os.path.abspath(str(source)) in captured_originals
+    assert os.path.abspath(str(missing)) not in captured_originals
     assert not os.path.exists(os.path.join(snapshot_dir, "absent.txt"))
 
 
