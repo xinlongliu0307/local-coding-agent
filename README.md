@@ -53,10 +53,8 @@ further measures: bounded conversation history, command confinement, file-
 path confinement, prompt-injection defence through content marking, and a
 verified snapshot recovery path. These are described in `docs/SECURITY.md`.
 With them, both the implementation roadmap and the hardening arc are
-complete. The remaining open directions are refinements rather than gaps:
-unifying the command tool's working directory with the file tools' workspace
-root, broadening the benchmark set, and a test helper to reduce the
-per-phase friction of suppressing optional loop behaviours.
+complete. The remaining open directions are refinements rather than gaps: broadening the benchmark set, and a test helper to reduce the per-phase
+friction of suppressing optional loop behaviours.
 
 ## Contributing
 

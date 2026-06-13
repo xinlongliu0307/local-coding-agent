@@ -30,6 +30,8 @@ before execution, and cannot be overridden by approval. An allowlist of
 routine inspection and test commands is recognised as safe; anything neither
 denied nor recognised is permitted but flagged at the approval prompt so it
 draws sharper scrutiny. Every mutating command also passes the approval gate.
+Commands also run with their working directory set to the workspace root, so
+relative paths resolve within the same scope the file tools enforce.
 
 ### File-path confinement
 
@@ -77,9 +79,12 @@ safe, and the project does not claim they do.
   contrived command can express a dangerous effect the patterns do not
   match. The approval gate remains the general safeguard for what the
   denylist does not catch.
-- The command tool is not yet confined to the workspace root the file tools
-  enforce. A command can still read outside the working area through the
-  shell. Unifying the two boundaries is a known, intended refinement.
+- The command tool runs from the workspace root, so relative paths are
+  confined to the same scope as the file tools, but a command using an
+  absolute path can still read outside it through the shell. True filesystem
+  jailing would require OS-level sandboxing, which is beyond this project's
+  scope; the approval gate and denylist remain the safeguards for what the
+  working-directory constraint does not cover.
 - Content marking is a mitigation, not a guarantee. A capable injection may
   still influence a fallible model despite the markers; the approval gate
   exists to ensure a subverted model still cannot perform a destructive

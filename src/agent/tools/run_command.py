@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from agent.command_policy import classify_command, Disposition
+from agent.workspace import get_workspace_root
 
 import subprocess
 
@@ -38,6 +39,7 @@ def run_command(command: str) -> str:
             capture_output=True,
             text=True,
             timeout=TIMEOUT_SECONDS,
+            cwd=get_workspace_root(),
         )
     except subprocess.TimeoutExpired:
         return (
