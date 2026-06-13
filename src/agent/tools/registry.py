@@ -23,6 +23,18 @@ TOOL_FUNCTIONS: dict[str, Callable[..., str]] = {
 }
 
 
+# Tools whose output is external content the agent did not author, and which
+# must therefore be marked as untrusted data before entering the model's
+# context. This is orthogonal to MUTATING_TOOLS: run_command is mutating yet
+# content-returning, while write_file is mutating but returns only a status.
+CONTENT_RETURNING_TOOLS: set[str] = {
+    "list_files",
+    "read_file",
+    "search_files",
+    "run_command",
+}
+
+
 # The set of tools that mutate state and therefore require approval before
 # execution. Tools not in this set are read-only and run without approval.
 MUTATING_TOOLS: set[str] = {
