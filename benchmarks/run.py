@@ -68,6 +68,7 @@ def run_one(task_dir: str, model_name: str) -> dict:
                 include_summary=False,
                 enable_snapshot=False,
                 declare_reading_order=False,
+                workspace_root=workdir,
             )
             agent_error = None
         except Exception as error:  # noqa: BLE001 - record, do not crash
