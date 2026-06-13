@@ -1,6 +1,7 @@
 """A mutating tool that executes a shell command under approval."""
 
 from __future__ import annotations
+from agent.command_policy import classify_command, Disposition
 
 import subprocess
 
@@ -20,6 +21,15 @@ def run_command(command: str) -> str:
     """
     if not command.strip():
         return "Error: an empty command is not allowed."
+    
+    disposition = classify_command(command)
+    if disposition is Disposition.DENIED:
+        return (
+            "COMMAND_REFUSED: this command is blocked by policy because it is "
+            "irreversible or escapes the working directory, and will not be "
+            "run even with approval. If you need this effect, ask the user to "
+            "perform it manually."
+        )
 
     try:
         completed = subprocess.run(

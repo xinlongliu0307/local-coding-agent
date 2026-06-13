@@ -6,6 +6,7 @@ from typing import Any, Callable
 
 from agent.mode import Mode, STEP_BY_STEP_MODES
 from agent.tools.registry import MUTATING_TOOLS
+from agent.command_policy import classify_command, Disposition
 
 
 def console_approver(name: str, arguments: dict[str, Any]) -> bool:
@@ -15,6 +16,13 @@ def console_approver(name: str, arguments: dict[str, Any]) -> bool:
     for key, value in arguments.items():
         preview = value if len(str(value)) <= 200 else f"{str(value)[:200]}..."
         print(f"  {key}: {preview}")
+    if name == "run_command":
+        disposition = classify_command(arguments.get("command", ""))
+        if disposition is Disposition.UNRECOGNISED:
+            print(
+                "  \u26a0 This command is not on the recognised-safe list. "
+                "Review it carefully before approving."
+            )
     response = input("Approve this action? [y/N] ").strip().lower()
     return response in ("y", "yes")
 
