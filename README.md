@@ -48,11 +48,15 @@ declaration; search and approval-gated command execution; and an
 evaluation harness. All implementation phases are complete and
 committed.
 
-Work beyond this point is open-ended extension rather than roadmap
-completion. Candidate directions include broadening the benchmark set —
-notably a second diagnostic task with an unambiguous bug, prompted by
-the specification ambiguity recorded in `benchmarks/RESULTS.md` — and
-resilience work for long multi-iteration conversations.
+Following the implementation phases, a security-hardening arc added five
+further measures: bounded conversation history, command confinement, file-
+path confinement, prompt-injection defence through content marking, and a
+verified snapshot recovery path. These are described in `docs/SECURITY.md`.
+With them, both the implementation roadmap and the hardening arc are
+complete. The remaining open directions are refinements rather than gaps:
+unifying the command tool's working directory with the file tools' workspace
+root, broadening the benchmark set, and a test helper to reduce the
+per-phase friction of suppressing optional loop behaviours.
 
 ## Contributing
 
@@ -81,3 +85,20 @@ An optional model name may be supplied to compare models:
 Results are appended to `benchmarks/results.jsonl` (not tracked in version
 control). A written comparison of two models, including two findings on
 model capability and benchmark design, is in `benchmarks/RESULTS.md`.
+
+## Security
+
+The agent moves safety from vigilance to structure across five measures:
+shell commands are confined by a denylist of irreversible operations and an
+allowlist of routine ones; file operations are confined to a workspace root,
+refusing paths that escape it; output from content-returning tools is marked
+as untrusted data to resist prompt injection, following OWASP LLM01:2025;
+long conversations are condensed to stay within the model's context window;
+and every changed file is snapshotted with a manifest so it can be restored
+to its original location, a recovery path verified by a round-trip test.
+
+These measures are layered with the approval gate beneath them, so more than
+one must fail for harm to occur. They raise the floor rather than making the
+agent unconditionally safe; the limits of each, including the command tool's
+not-yet-unified workspace boundary, are stated honestly in
+`docs/SECURITY.md`.
