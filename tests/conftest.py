@@ -45,6 +45,7 @@ def run_task_quiet(task, model, **overrides):
         "enable_snapshot": False,
         "declare_reading_order": False,
         "enable_condensation": False,
+        "enable_progress_detection": False,
     }
     defaults.update(overrides)
     return _run_task(task, model=model, **defaults)

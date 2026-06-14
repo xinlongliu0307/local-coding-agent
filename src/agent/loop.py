@@ -23,6 +23,9 @@ from agent.history import needs_condensation, condense_history
 from agent.workspace import set_workspace_root
 from agent.untrusted import wrap_untrusted
 from agent.tools.registry import CONTENT_RETURNING_TOOLS
+from agent.progress import (
+    ProgressTracker, call_signature, progress_hint, progress_halt_message,
+)
 
 
 SYSTEM_PROMPT = (
@@ -31,7 +34,10 @@ SYSTEM_PROMPT = (
     "project. When a task requires information you do not have, call the "
     "appropriate tool rather than guessing. Some tools change the filesystem "
     "and require user approval; if an action is declined, do not retry it "
-    "without changing your approach. When you have enough information to "
+    "without changing your approach. If an action fails or returns an "
+    "unexpected result, do not repeat the identical action; re-read the "
+    "relevant file or re-examine the result and take a different step. "
+    "When you have enough information to "
     "answer or have completed the task, respond with plain text and do not "
     "call further tools. "
     "Critical rule: before calling edit_file on any file, you MUST first "
@@ -59,6 +65,7 @@ def run_task(
     enable_snapshot: bool = True,
     declare_reading_order: bool = True,
     enable_condensation: bool = True,
+    enable_progress_detection: bool = True,
     workspace_root: str | None = None,
 ) -> str:
     """Run a single task through the ReAct loop and return the final answer.
@@ -75,6 +82,9 @@ def run_task(
         per_call_approver=console_approver,
         batch_approver=batch_console_approver,
     )
+
+    tracker = ProgressTracker() if enable_progress_detection else None
+    halted = False
 
     if workspace_root is not None:
         set_workspace_root(workspace_root)
@@ -160,7 +170,27 @@ def run_task(
             else:
                 tool_content = result
             messages.append({"role": "tool", "content": tool_content})
-            
+
+            if tracker is not None:
+                signature = call_signature(name, arguments)
+                disposition = tracker.record(signature, result)
+                if disposition == "halt":
+                    times = tracker.repetition_count(signature, result)
+                    if verbose:
+                        print(
+                            "\n[progress] Halting after the same action "
+                            f"produced the same result {times} times."
+                        )
+                    final_text = progress_halt_message(result, times)
+                    halted = True
+                    break
+                if disposition == "warn":
+                    messages.append(
+                        {"role": "user", "content": progress_hint()}
+                    )
+        if halted:
+            break
+
     else:
         final_text = (
             "The task did not complete within the iteration limit. "
