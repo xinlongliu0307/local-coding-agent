@@ -100,7 +100,7 @@ def test_ask_mode_returns_questions_without_working():
     assert client.calls == 1
 
 
-def test_ask_mode_proceeds_when_brief_is_adequate(workspace):
+def test_ask_mode_proceeds_when_brief_is_adequate(workspace, run_quiet):
     target = workspace / "out.txt"
     client = SequenceClient(
         [
@@ -120,13 +120,7 @@ def test_ask_mode_proceeds_when_brief_is_adequate(workspace):
         ]
     )
     session = ApprovalSession(Mode.ASK, lambda n, a: True, lambda: True)
-    result = run_task(
-        "A fully specified task.",
-        model=client,
-        session=session,
-        verbose=False,
-        include_summary=False,
-        declare_reading_order=False,
-    )
+    result = run_quiet("A fully specified task.", client, session=session)
+    
     assert result == "Done."
     assert target.read_text() == "x"
