@@ -1,0 +1,29 @@
+
+{
+
+  "title": "local-coding-agent",
+
+  "description": "A safety-first AI coding agent that runs entirely on local hardware with open-weights models via Ollama.",
+
+  "upload_type": "software",
+
+  "license": "Apache-2.0",
+
+  "creators": [
+
+    {
+
+      "name": "Liu, Xinlong",
+
+      "affiliation": "Institute for Marine and Antarctic Studies, University of Tasmania",
+
+      "orcid": "0000-0001-6794-7571"
+
+    }
+
+  ],
+
+  "keywords": ["AI agent", "coding agent", "local LLM", "Ollama", "open-weights", "software safety"]
+
+}
+
