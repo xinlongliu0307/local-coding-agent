@@ -57,3 +57,51 @@ def test_empty_old_string_refused(workspace):
     result = edit_file(str(target), "   ", "y")
     assert "No change made" in result
     assert target.read_text() == "x = 1\n"
+
+
+def test_multiline_edit_refuses_whitespace_fallback(workspace):
+    # Reproduces the meteorological trial: an old_string that matches ignoring
+    # whitespace but spans two lines, with a multi-line new_string. The
+    # fallback must NOT apply, because splicing across lines corrupts
+    # indentation. The file must be left untouched.
+    target = workspace / "code.py"
+    target.write_text(
+        "def f(x):\n"
+        "    # y = x + 1\n"
+        "    return x + 1\n"
+    )
+    result = edit_file(
+        str(target),
+        "# y = x + 1\nreturn x + 1",
+        "y = x + 1\nreturn y",
+    )
+    assert "EDIT_TARGET_NOT_FOUND" in result
+    assert target.read_text() == (
+        "def f(x):\n"
+        "    # y = x + 1\n"
+        "    return x + 1\n"
+    )
+
+
+def test_singleline_match_with_multiline_newstring_refused(workspace):
+    # A single-line target matched ignoring whitespace, but a multi-line
+    # new_string, must also be refused to avoid inserting a bare newline that
+    # would land unindented.
+    target = workspace / "code.py"
+    target.write_text("    value = compute()\n")
+    result = edit_file(
+        str(target),
+        "value=compute()",
+        "value = compute()\nreturn value",
+    )
+    assert "EDIT_TARGET_NOT_FOUND" in result
+    assert target.read_text() == "    value = compute()\n"
+
+
+def test_singleline_whitespace_fallback_still_works(workspace):
+    # The single-line spacing benefit from Phase Twenty must remain intact.
+    target = workspace / "code.py"
+    target.write_text("    return a + 0.70 * v\n")
+    result = edit_file(str(target), "a + 0.70*v", "a - 0.70 * v")
+    assert "ignoring whitespace" in result
+    assert target.read_text() == "    return a - 0.70 * v\n"
