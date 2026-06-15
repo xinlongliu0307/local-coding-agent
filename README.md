@@ -1,5 +1,7 @@
 # local-coding-agent
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20697267.svg)](https://doi.org/10.5281/zenodo.20697267)
+
 A local, open-weights AI coding agent for general software engineering,
 designed to run entirely on a personal laptop using language models
 served via Ollama. The agent targets multi-file edits, refactoring, and
