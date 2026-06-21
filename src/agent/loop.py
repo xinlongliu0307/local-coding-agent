@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 from typing import Any
@@ -228,6 +229,24 @@ def _format_clarifying_questions(questions: list[str]) -> str:
     return "\n".join(lines)
 
 
+def _loads_json_or_python(candidate: str) -> Any:
+    """Parse a tool-call object that is JSON or a Python-dict literal.
+
+    Some models emit tool calls with single-quoted string values, which is
+    valid Python syntax but not valid JSON. Strict JSON is tried first, then a
+    safe literal evaluation (ast.literal_eval, which never executes code) that
+    also accepts single quotes.
+    """
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        pass
+    try:
+        return ast.literal_eval(candidate)
+    except (ValueError, SyntaxError):
+        return None
+
+
 def _extract_embedded_tool_calls(content: str) -> list[dict[str, Any]]:
     """Detect one or more tool-call JSON objects embedded in text content."""
     if not content:
@@ -236,10 +255,7 @@ def _extract_embedded_tool_calls(content: str) -> list[dict[str, Any]]:
     calls: list[dict[str, Any]] = []
     for match in re.finditer(r"\{(?:[^{}]|\{[^{}]*\})*\}", content):
         candidate = match.group(0)
-        try:
-            parsed = json.loads(candidate)
-        except json.JSONDecodeError:
-            continue
+        parsed = _loads_json_or_python(candidate)
         if not isinstance(parsed, dict):
             continue
         name = parsed.get("name")
