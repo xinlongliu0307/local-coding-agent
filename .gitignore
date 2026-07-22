@@ -220,3 +220,6 @@ __marimo__/
 # macOS
 .DS_Store
 benchmarks/results.jsonl
+
+# personal task runner
+run_agent.py
