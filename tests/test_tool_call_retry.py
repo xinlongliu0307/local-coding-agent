@@ -23,3 +23,22 @@ def test_prose_mentioning_a_tool_is_not_a_tool_call():
 
 def test_empty_content_is_not_a_tool_call():
     assert _looks_like_attempted_tool_call("") is False
+
+
+def test_detects_tool_call_after_a_prose_preamble():
+    # The eighth observed emission failure: prose, then the JSON blob.
+    content = (
+        "It seems the test file does not exist. I will proceed to create "
+        "the module.\n\n"
+        '{"name": "write_file", "arguments": {"path": "a.py", '
+        '"content": "d = {k: 1 for k in range(3)}"}}'
+    )
+    assert _looks_like_attempted_tool_call(content) is True
+
+
+def test_prose_describing_a_tool_call_is_not_detected():
+    content = (
+        "I would call write_file with arguments for the path and content, "
+        "but you should create it yourself."
+    )
+    assert _looks_like_attempted_tool_call(content) is False

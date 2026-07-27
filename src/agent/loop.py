@@ -257,12 +257,11 @@ def _looks_like_attempted_tool_call(content: str) -> bool:
     """
     if not content:
         return False
-    stripped = content.strip()
-    if not stripped.startswith("{"):
+    if not re.search(r"""\{\s*["']name["']\s*:""", content):
         return False
-    if '"name"' not in stripped and "'name'" not in stripped:
+    if '"arguments"' not in content and "'arguments'" not in content:
         return False
-    return any(name in stripped for name in TOOL_FUNCTIONS)
+    return any(name in content for name in TOOL_FUNCTIONS)
 
 
 def _loads_json_or_python(candidate: str) -> Any:
