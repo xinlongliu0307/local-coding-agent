@@ -117,6 +117,7 @@ def run_task(
     ]
 
     final_text = ""
+    reissue_requests = 0
     for iteration in range(1, MAX_ITERATIONS + 1):
         if verbose:
             print(f"\n--- Iteration {iteration} ---")
@@ -136,7 +137,24 @@ def run_task(
                 tool_calls = embedded
 
         if not tool_calls:
-            final_text = message.get("content", "")
+            content = message.get("content", "")
+            if _looks_like_attempted_tool_call(content) and reissue_requests < 2:
+                reissue_requests += 1
+                if verbose:
+                    print("[reissue] Tool call emitted as text; asking for a "
+                          "structured call.")
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "Your last message contained a tool call written as "
+                        "plain text, which cannot be executed. Re-issue it as "
+                        "a proper tool call. If the file content contains "
+                        "triple quotes, write the file without a docstring "
+                        "first and add the docstring in a separate edit."
+                    ),
+                })
+                continue
+            final_text = content
             if verbose:
                 print(f"Model produced final answer:\n{final_text}")
             break
@@ -227,6 +245,24 @@ def _format_clarifying_questions(questions: list[str]) -> str:
         "Please re-run the task with these details included in the brief."
     )
     return "\n".join(lines)
+
+
+def _looks_like_attempted_tool_call(content: str) -> bool:
+    """True when content appears to be a tool call emitted as plain text.
+
+    Some models emit a tool call into the final-answer slot in a form no
+    parser can recover, for example with unescaped triple quotes inside a
+    docstring. Detecting the attempt lets the loop ask for a re-issue
+    rather than ending the task with nothing written.
+    """
+    if not content:
+        return False
+    stripped = content.strip()
+    if not stripped.startswith("{"):
+        return False
+    if '"name"' not in stripped and "'name'" not in stripped:
+        return False
+    return any(name in stripped for name in TOOL_FUNCTIONS)
 
 
 def _loads_json_or_python(candidate: str) -> Any:
